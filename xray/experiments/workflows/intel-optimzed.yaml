@@ -1,0 +1,63 @@
+name: experiment-optimized
+description: |
+  This is a slightly optimized implementation of the x-ray demo samples. We use intel optimized tensorflow from conda intel channels and the standard FuseML workflows
+inputs:
+  - name: mlflow-codeset
+    description: an MLFlow compatible codeset
+    type: codeset
+  - name: predictor
+    description: type of predictor engine
+    type: string
+    default: auto
+outputs:
+  - name: prediction-url
+    description: "The URL where the exposed prediction service endpoint can be contacted to run predictions."
+    type: string
+steps:
+  - name: builder
+    image: ghcr.io/alefesta/intel-dockerfile:latest
+    inputs:
+      - name: mlflow-codeset
+        codeset:
+          name: '{{ inputs.mlflow-codeset }}'
+          path: '/project'
+    outputs:
+      - name: mlflow-env
+        image:
+          name: 'registry.fuseml-registry/mlflow-builder/{{ inputs.mlflow-codeset.name }}:{{ inputs.mlflow-codeset.version }}'
+  - name: trainer
+    image: '{{ steps.builder.outputs.mlflow-env }}'
+    inputs:
+      - name: mlflow-codeset
+        codeset:
+          name: '{{ inputs.mlflow-codeset }}'
+          path: '/project'
+    outputs:
+      - name: mlflow-model-url
+    env:
+      - name: MLFLOW_TRACKING_URI
+        value: "http://mlflow"
+      - name: MLFLOW_S3_ENDPOINT_URL
+        value: "http://mlflow-minio:9000"
+      - name: AWS_ACCESS_KEY_ID
+        value: vgAIrhQOsLAwbTVD06v3
+      - name: AWS_SECRET_ACCESS_KEY
+        value: 2IJoAStDIX5AwIQpacyfkw2Q5mRiPzkrXFcsOET2
+  # - name: predictor
+  #   image: ghcr.io/fuseml/kfserving-predictor:0.1
+  #   inputs:
+  #     - name: model
+  #       value: '{{ steps.trainer.outputs.mlflow-model-url }}'
+  #     - name: predictor
+  #       value: '{{ inputs.predictor }}'
+      # - name: mlflow-codeset
+      #   codeset:
+      #     name: '{{ inputs.mlflow-codeset }}'
+      #     path: '/project'
+  #   outputs:
+  #     - name: prediction-url
+  #   env:
+  #     - name: AWS_ACCESS_KEY_ID
+  #       value: vgAIrhQOsLAwbTVD06v3
+  #     - name: AWS_SECRET_ACCESS_KEY
+  #       value: 2IJoAStDIX5AwIQpacyfkw2Q5mRiPzkrXFcsOET2
